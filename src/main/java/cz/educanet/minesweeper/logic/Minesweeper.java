@@ -1,13 +1,29 @@
 package cz.educanet.minesweeper.logic;
 
+import java.util.Random;
+
 public class Minesweeper {
 
     private int rowsCount;
     private int columnsCount;
+    private int oneblock;
+    private Area[][] field;
+    private int bombs = 20;
+    private boolean clicked = false;
+    private int flags = bombs;
+
 
     public Minesweeper(int rows, int columns) {
+        field = new Area[columns][rows];
         this.rowsCount = rows;
         this.columnsCount = columns;
+        for (int i = 0; i < columns; i++) {
+            for (int j = 0; j < rows; j++) {
+                field[i][j] = new Area();
+            }
+        }
+        oneblock = (rows * columns) - bombs;
+        makeFields(rows, columns);
     }
 
     /**
@@ -21,7 +37,7 @@ public class Minesweeper {
      * @return field type
      */
     public int getField(int x, int y) {
-        return 0;
+        return field[x][y].getState();
     }
 
     /**
@@ -35,6 +51,28 @@ public class Minesweeper {
      * @param y Y
      */
     public void toggleFieldState(int x, int y) {
+        if (field[x][y].getState() != 2){
+            field[x][y].setState(2);
+        }
+        else {
+            field[x][y].setState(0);
+        }
+        flags--;
+    }
+
+    public void makeFields(int rows, int columns) {
+        int counter = 0;
+        Random rd = new Random();
+        while (bombs != counter) {
+            int x = rd.nextInt(columns);
+            int y = rd.nextInt(rows);
+            while (field[x][y].getBomb()) {
+                x = rd.nextInt(columns);
+                y = rd.nextInt(rows);
+            }
+            field[x][y].setBomb(true);
+            counter++;
+        }
     }
 
     /**
@@ -44,6 +82,58 @@ public class Minesweeper {
      * @param y Y
      */
     public void reveal(int x, int y) {
+        if (field[x][y].getBomb()) {
+            clicked = true;
+        }
+        field[x][y].setState(1);
+
+        if (getAdjacentBombCount(x, y) == 0) {
+            boolean topleft = x != 0 && y != 0;
+            boolean topright = x != columnsCount - 1 && y != 0;
+            boolean bottomleft = x != 0 && y != rowsCount - 1;
+            boolean bottomright = x != columnsCount - 1 && y != rowsCount - 1;
+            if (bottomleft && !field[x - 1][y + 1].getBomb() && field[x - 1][y + 1].getState() != 1){
+                oneblock--;
+                reveal(x - 1, y + 1);
+            }
+            if (bottomleft || topleft)
+                if (!field[x - 1][y].getBomb() && field[x - 1][y].getState() != 1) {
+                    oneblock--;
+                    reveal(x - 1, y);
+                }
+
+            if (bottomright && !field[x + 1][y + 1].getBomb() && field[x + 1][y + 1].getState() != 1){
+                oneblock--;
+                reveal(x + 1, y + 1);
+            }
+            if (bottomright || bottomleft)
+                if (!field[x][y + 1].getBomb() && field[x][y + 1].getState() != 1) {
+                    oneblock--;
+                    reveal(x, y + 1);
+                }
+
+            if (topleft && !field[x - 1][y - 1].getBomb() && field[x - 1][y - 1].getState() != 1){
+                oneblock--;
+                reveal(x - 1, y - 1);
+            }
+
+            if (topleft || topright)
+                if (!field[x][y - 1].getBomb() && field[x][y - 1].getState() != 1) {
+                    oneblock--;
+                    reveal(x, y - 1);
+                }
+
+            if (topright && !field[x + 1][y - 1].getBomb() && field[x + 1][y - 1].getState() != 1){
+                oneblock--;
+                reveal(x + 1, y - 1);
+            }
+            if (topright || bottomright)
+                if (!field[x + 1][y].getBomb() && field[x + 1][y].getState() != 1) {
+                    oneblock--;
+                    reveal(x + 1, y);
+                }
+        }
+        oneblock--;
     }
 
     /**
@@ -54,36 +144,31 @@ public class Minesweeper {
      * @return number of adjacent bombs
      */
     public int getAdjacentBombCount(int x, int y) {
-        return 0;
-    }
+        int bombs = 0;
 
-    /**
-     * Checks if there is a bomb on the current position
-     *
-     * @param x X
-     * @param y Y
-     * @return true if bomb on position
-     */
-    public boolean isBombOnPosition(int x, int y) {
-        return false;
-    }
+        boolean topleft = x != 0 && y != 0;
+        boolean topright = x != columnsCount - 1 && y != 0;
+        boolean bottomleft = x != 0 && y != rowsCount - 1;
+        boolean bottomright = x != columnsCount - 1 && y != rowsCount - 1;
 
-    /**
-     * Returns the amount of bombs on the field
-     *
-     * @return bomb count
-     */
-    public int getBombCount() {
-        return 0;
-    }
+        if (bottomleft && field[x][y + 1].getBomb() || bottomright && field[x][y + 1].getBomb())
+            bombs++;
+        if (bottomleft && field[x - 1][y + 1].getBomb())
+            bombs++;
+        if (bottomleft && field[x - 1][y].getBomb() || topleft && field[x - 1][y].getBomb())
+            bombs++;
+        if (topleft && field[x - 1][y - 1].getBomb())
+            bombs++;
+        if (topleft && field[x][y - 1].getBomb() || topright && field[x][y - 1].getBomb())
+            bombs++;
+        if (topright && field[x + 1][y - 1].getBomb())
+            bombs++;
+        if (topright && field[x + 1][y].getBomb() || bottomright && field[x + 1][y].getBomb())
+            bombs++;
+        if (bottomright && field[x + 1][y + 1].getBomb())
+            bombs++;
 
-    /**
-     * total bombs - number of flags
-     *
-     * @return remaining bomb count
-     */
-    public int getRemainingBombCount() {
-        return 0;
+        return bombs;
     }
 
     /**
@@ -92,7 +177,7 @@ public class Minesweeper {
      * @return if player won
      */
     public boolean didWin() {
-        return false;
+        return oneblock == 0;
     }
 
     /**
@@ -101,7 +186,7 @@ public class Minesweeper {
      * @return if player lost
      */
     public boolean didLoose() {
-        return false;
+        return clicked;
     }
 
     public int getRows() {
@@ -111,5 +196,4 @@ public class Minesweeper {
     public int getColumns() {
         return columnsCount;
     }
-
 }
